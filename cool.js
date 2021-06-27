@@ -66,6 +66,7 @@ export class Grid extends Node {
 export class Scene {
     constructor(canvas) {
         this.canvas = canvas;
+        this.children = [];
     }
     update(fps, callback) {
         var delay = 1000 / fps, time = null, frame = -1, tref;
@@ -111,11 +112,24 @@ export class Scene {
         const ctx = this.canvas.getContext("2d");
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
+    add(node) {
+        this.children.push(node);
+    }
+    remove(node) {
+        for (let i = 0; i < this.children.length; i++) {
+            const elem = this.children[i];
+            if (elem == node) {
+                this.children.splice(i, 1);
+                break;
+            }
+        }
+    }
     draw(path2d, config) {
         const ctx = this.canvas.getContext("2d");
         ctx.save();
         ctx.fillStyle = config.backgroundColor;
         ctx.strokeStyle = config.borderColor;
+        ctx.lineWidth = config.borderWidth;
         if (config.fill && config.border) {
             ctx.fill(path2d);
             ctx.stroke(path2d);
@@ -131,36 +145,63 @@ export class Scene {
         }
         ctx.restore();
     }
-}
-export class Game {
-    constructor(scene) {
-        this.scene = scene;
-        this.children = [];
-    }
-    add(node) {
-        this.children.push(node);
-    }
-    draw() {
+    show() {
         this.children.forEach(node => {
-            this.scene.draw(node.getPath(), node.style);
+            this.draw(node.getPath(), node.style);
         });
     }
-    remove(node) {
-        for (let i = 0; i < this.children.length; i++) {
-            const elem = this.children[i];
-            if (elem == node) {
-                this.children.splice(i, 1);
-                break;
-            }
+}
+export class Animation {
+    constructor(fps, callback) {
+        this.fps = fps;
+        this.callback = callback;
+        this.delay = 1000 / this.fps;
+        this.time = null;
+        this.frame = -1;
+        this.isPlaying = false;
+    }
+    frameRate(newfps) {
+        if (!arguments.length)
+            return this.fps;
+        this.fps = newfps;
+        this.delay = 1000 / this.fps;
+        this.frame = -1;
+        this.time = null;
+    }
+    loop(timestamp) {
+        if (this.time === null)
+            this.time = timestamp;
+        var seg = Math.floor((timestamp - this.time) / this.delay);
+        if (seg > this.frame) {
+            this.frame = seg;
+            this.callback({
+                time: timestamp,
+                frame: this.frame
+            });
+        }
+        this.tref = requestAnimationFrame(this.loop);
+    }
+    start() {
+        if (!this.isPlaying) {
+            this.isPlaying = true;
+            this.tref = requestAnimationFrame(this.loop);
+        }
+    }
+    pause() {
+        if (this.isPlaying) {
+            cancelAnimationFrame(this.tref);
+            this.isPlaying = false;
+            this.time = null;
+            this.frame = -1;
         }
     }
 }
-class Style {
+export class Style {
     constructor() {
         this.backgroundColor = "rgb(0,0,0)";
         this.borderColor = "rgb(0,0,0)";
         this.fill = true;
         this.border = false;
-        Date.now;
+        this.borderWidth = 1;
     }
 }

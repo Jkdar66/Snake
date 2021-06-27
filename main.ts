@@ -1,4 +1,5 @@
-import { Game, Grid, Rectangle, Scene, Size, Vector2 } from "./cool.js";
+import { Grid, Rectangle, Scene, Size, Style, Vector2 } from "./cool.js";
+import { Snake } from "./snake.js";
 
 var config = {
     width: innerWidth,
@@ -8,164 +9,98 @@ var config = {
 const CORNER_SIZE = 30;
 const NUM_ROWS: number = 20;
 const NUM_COLUMNS: number = 20;
+const START_X = CORNER_SIZE * 2;
+const END_X = CORNER_SIZE * NUM_COLUMNS + START_X - CORNER_SIZE;
+const START_Y = CORNER_SIZE * 3;
+const END_Y = CORNER_SIZE * NUM_ROWS + START_Y - CORNER_SIZE;
 
 var canvas: HTMLCanvasElement;
-var ctx: CanvasRenderingContext2D;
-var game: Game;
-var scene: Scene;
-var head: Rectangle;
-var tails: Rectangle[];
-var food: Rectangle;
+var guiScene: Scene;
+var gameScene: Scene;
+var bounds: Rectangle[];
 var grid: Grid;
-var foodX: number;
-var foodY: number;
-var dir: number;
-
-enum Dir{
-    RIGHT, LEFT, UP, DOWN
-}
+var gridBorder: Rectangle;
+var snake: Snake;
 
 function init() {
     canvas = document.createElement("canvas");
     canvas.width = config.width;
     canvas.height = config.height;
     document.body.appendChild(canvas);
-    ctx = canvas.getContext("2d");
 
-    dir = Dir.RIGHT;
-    
-    scene = new Scene(canvas);
-    game = new Game(scene);
+    gameScene = new Scene(canvas);
 
-    tails = [];
-    
-    head = new Rectangle(new Vector2(0, 0), new Size(CORNER_SIZE, CORNER_SIZE));
-    head.style.backgroundColor = "rgb(0, 255, 0)";
+    bounds = [];
 
-    foodX = getRandomInt(0, NUM_COLUMNS - 1) * CORNER_SIZE;
-    foodY = getRandomInt(0, NUM_ROWS - 1) * CORNER_SIZE;
-    food = new Rectangle(new Vector2(foodX, foodY), new Size(CORNER_SIZE, CORNER_SIZE));
-    food.style.backgroundColor = "rgb(255, 0, 0)";
-
-    grid = new Grid(new Vector2(0, 0), new Size(CORNER_SIZE, CORNER_SIZE), NUM_ROWS, NUM_COLUMNS);
+    grid = new Grid(new Vector2(START_X, START_Y), new Size(CORNER_SIZE, CORNER_SIZE), NUM_ROWS, NUM_COLUMNS);
     grid.style.fill = true;
-    grid.style.backgroundColor = "rgb(150, 150, 150)";
-    
-    game.add(grid);
-    game.add(food);
-    game.add(head);
-}
+    grid.style.borderColor = "rgb(100, 100, 100)";
+    grid.style.backgroundColor = "rgb(200, 200, 200)";
 
-function getRandomInt(min: number, max: number) {
-    return Math.floor(Math.random() * (max - min + 1) + min);
+    gridBorder = new Rectangle(
+        new Vector2(START_X - CORNER_SIZE, START_Y - CORNER_SIZE),
+        new Size((NUM_COLUMNS + 2) * CORNER_SIZE, (NUM_ROWS + 2) * CORNER_SIZE)
+    );
+    gridBorder.style.fill = false;
+    gridBorder.style.border = true;
+    gridBorder.style.borderColor = "rgb(0, 0, 0)";
+    gridBorder.style.borderWidth = 2;
+
+    var style = new Style();
+    style.backgroundColor = "rgb(255, 150, 150)";
+    style.border = true;
+    style.borderColor = "rgb(255, 255, 255)";
+
+    for (let i = 0; i < 2; i++) {
+        var size = new Size(CORNER_SIZE, CORNER_SIZE);
+        
+        for (let j = -1; j <= NUM_COLUMNS; j++) {
+            var x = j * CORNER_SIZE + START_X;
+            var y = START_Y - CORNER_SIZE;
+            if(i == 1) {
+                y = END_Y + CORNER_SIZE;
+            }
+            var rect = new Rectangle(new Vector2(x, y), size);
+            rect.style = style;
+            bounds.push(rect);
+            gameScene.add(rect);
+        }
+        
+        for (let j = 0; j < NUM_ROWS; j++) {
+            var y = j * CORNER_SIZE + START_Y;
+            var x = START_X - CORNER_SIZE;
+            if(i == 1) {
+                x = END_X + CORNER_SIZE;
+            }
+            var rect = new Rectangle(new Vector2(x, y), size);
+            rect.style = style;
+            bounds.push(rect);
+            gameScene.add(rect);
+        }
+    }
+
+    gameScene.add(grid);
+    gameScene.add(gridBorder);
+
+    snake = new Snake(gameScene, {
+        startX: START_X, startY: START_Y,
+        endX: END_X, endY: END_Y,
+        numColumns: NUM_COLUMNS, numRows: NUM_ROWS,
+        cornerSize: CORNER_SIZE
+    });
 }
 
 function update() {
-    scene.update(8, () => {
-        scene.clear();
-        game.draw();
-        collision();
-        move();
+    gameScene.update(8, () => {
+        gameScene.clear();
+        gameScene.show();
+        snake.collision();
+        snake.move();
     });
 }
-
-function collision() {
-    var headPos = head.position;
-    var foodPos = food.position;
-    var floor = Math.floor;
-    if(floor(headPos.x) == floor(foodPos.x) && floor(headPos.y) == floor(foodPos.y)) {
-        addNewTail();
-        foodX = getRandomInt(0, NUM_COLUMNS - 1) * CORNER_SIZE;
-        foodY = getRandomInt(0, NUM_ROWS - 1) * CORNER_SIZE;
-        food.position = new Vector2(foodX, foodY);
-    }
-}
-
-function addNewTail() {
-    var position: Vector2 = new Vector2(0, 0);
-    if(tails.length == 0) {
-        position.x = head.position.x;
-        position.y = head.position.y;
-    }else {
-        position.x = tails[tails.length-1].position.x;
-        position.y = tails[tails.length-1].position.y;
-    }
-    var tail = new Rectangle(position, new Size(CORNER_SIZE, CORNER_SIZE));
-    tail.style.backgroundColor = "rgba(0, 255, 0, 0.5)"
-    tails.push(tail);
-    game.add(tail);
-}
-
-function move() {
-
-    if(tails.length >= 2) {
-        for (let i = tails.length - 1; i >= 1; i--) {
-            tails[i].position.x = tails[i-1].position.x;
-            tails[i].position.y = tails[i-1].position.y;
-        }
-    }
-
-    if(tails.length >= 1) {
-        tails[0].position.x = head.position.x;
-        tails[0].position.y = head.position.y;
-    }
-
-    switch(dir) {
-        case Dir.RIGHT:
-            if(head.position.x < CORNER_SIZE*(NUM_COLUMNS-1)) {
-                head.position.x += CORNER_SIZE;
-            }
-            break;
-        case Dir.LEFT:
-            if(head.position.x > 0) {
-                head.position.x -= CORNER_SIZE;
-            }
-            break;
-        case Dir.UP:
-            if(head.position.y > 0) {
-                head.position.y -= CORNER_SIZE;
-            }
-            break;
-        case Dir.DOWN:
-            if(head.position.y < CORNER_SIZE*(NUM_ROWS-1)) {
-                head.position.y += CORNER_SIZE;
-            }
-            break;
-    }
-}
-
-function handel() {
-    window.addEventListener("keydown", (e) => {
-        e.preventDefault();
-        switch(e.code) {
-            case "ArrowRight":
-                if(dir != Dir.LEFT) {
-                    dir = Dir.RIGHT;
-                }
-                break;
-            case "ArrowLeft":
-                if(dir != Dir.RIGHT) {
-                    dir = Dir.LEFT;
-                }
-                break;
-            case "ArrowUp":
-                if(dir != Dir.DOWN) {
-                    dir = Dir.UP;
-                }
-                break;
-            case "ArrowDown":
-                if(dir != Dir.UP) {
-                    dir = Dir.DOWN;
-                }
-                break;
-        }
-    });
-}
-
 
 function main() {
     init();
-    handel();
     update();
 }
 

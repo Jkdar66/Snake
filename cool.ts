@@ -76,8 +76,10 @@ export class Grid extends Node{
 }
 export class Scene {
     canvas: HTMLCanvasElement;
+    children: Node[];
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
+        this.children = [];
     }
     update(fps: number, callback: CallableFunction) {
 
@@ -130,11 +132,24 @@ export class Scene {
         const ctx = this.canvas.getContext("2d");
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
+    add(node: Node) {
+        this.children.push(node);
+    }
+    remove(node: Node) {
+        for (let i = 0; i < this.children.length; i++) {
+            const elem = this.children[i];
+            if(elem == node) {
+                this.children.splice(i, 1);
+                break;
+            }
+        }
+    }
     draw(path2d: Path2D, config: Style) {
         const ctx = this.canvas.getContext("2d");
         ctx.save();
         ctx.fillStyle = config.backgroundColor;
         ctx.strokeStyle = config.borderColor;
+        ctx.lineWidth = config.borderWidth;
         if(config.fill && config.border) {
             ctx.fill(path2d);
             ctx.stroke(path2d);
@@ -147,43 +162,79 @@ export class Scene {
         }
         ctx.restore();
     }
-}
-export class Game {
-    scene: Scene;
-    children: Node[];
-    constructor(scene: Scene) {
-        this.scene = scene;
-        this.children = [];
-    }
-    add(node: Node) {
-        this.children.push(node);
-    }
-    draw() {
+    show() {
         this.children.forEach(node => {
-            this.scene.draw(node.getPath(), node.style);
+            this.draw(node.getPath(), node.style);
         });
-    }
-    remove(node: Node) {
-        for (let i = 0; i < this.children.length; i++) {
-            const elem = this.children[i];
-            if(elem == node) {
-                this.children.splice(i, 1);
-                break;
-            }
-        }
     }
 }
 
-class Style {
+export class Animation{
+    fps: number;
+    delay: number;
+    time: number;
+    frame: number;
+    tref: number;
+    seg: number;
+    isPlaying: boolean;
+    callback: CallableFunction;
+
+    constructor(fps: number, callback: CallableFunction) {
+        this.fps = fps;
+        this.callback = callback;
+        this.delay = 1000 / this.fps;
+        this.time = null;
+        this.frame = -1;
+        this.isPlaying = false;
+    }
+
+    frameRate(newfps: number) {
+        if (!arguments.length) return this.fps;
+        this.fps = newfps;
+        this.delay = 1000 / this.fps;
+        this.frame = -1;
+        this.time = null;
+    }
+    loop(timestamp: number) {
+        if (this.time === null) this.time = timestamp;
+        var seg = Math.floor((timestamp - this.time) / this.delay);
+        if (seg > this.frame) {
+            this.frame = seg;
+            this.callback({
+                time: timestamp,
+                frame: this.frame
+            });
+        }
+        this.tref = requestAnimationFrame(this.loop);
+    }
+    start() {
+        if (!this.isPlaying) {
+            this.isPlaying = true;
+            this.tref = requestAnimationFrame(this.loop);
+        }
+    }
+    pause() {
+        if (this.isPlaying) {
+            cancelAnimationFrame(this.tref);
+            this.isPlaying = false;
+            this.time = null;
+           this.frame = -1;
+        }
+    }
+
+}
+
+export class Style {
     backgroundColor: string;
     borderColor: string;
     fill: boolean;
     border: boolean;
+    borderWidth: number;
     constructor() {
         this.backgroundColor = "rgb(0,0,0)";
         this.borderColor = "rgb(0,0,0)";
         this.fill = true;
         this.border = false;
-        Date.now
+        this.borderWidth = 1;
     }
 }
