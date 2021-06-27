@@ -1,8 +1,9 @@
 import { Rectangle, Size, Vector2 } from "./cool.js";
 export class Snake {
-    constructor(scene, config) {
+    constructor(scene, config, wall) {
         this.scene = scene;
         this.config = config;
+        this.wall = wall;
         this.dir = Dir.RIGHT;
         this.tails = [];
         const cfg = this.config;
@@ -41,6 +42,20 @@ export class Snake {
         this.scene.add(tail);
     }
     collision() {
+        if (this.colliedWall() || this.colliedSelf()) {
+            this.tails.forEach(tail => {
+                tail.position = Object.assign({}, tail.oldPosition);
+            });
+            this.head.position = Object.assign({}, this.head.oldPosition);
+            this.scene.clear();
+            this.scene.show();
+            // this.scene.pause();
+            this.dir = null;
+            console.log("GAME OVER");
+        }
+        this.colliedFood();
+    }
+    colliedFood() {
         var cfg = this.config;
         var headPos = this.head.position;
         var foodPos = this.food.position;
@@ -52,66 +67,97 @@ export class Snake {
             this.food.position = new Vector2(this.foodX, this.foodY);
         }
     }
+    colliedSelf() {
+        const headPos = this.head.position;
+        const tails = this.tails;
+        for (let i = 0; i < tails.length; i++) {
+            const tail = tails[i];
+            const tailPos = tail.position;
+            if (headPos.x == tailPos.x && headPos.y == tailPos.y) {
+                console.log(true);
+                return true;
+            }
+        }
+        return false;
+    }
+    colliedWall() {
+        const headPos = this.head.position;
+        const wall = this.wall;
+        for (let i = 0; i < wall.length; i++) {
+            const block = wall[i];
+            const blockPos = block.position;
+            if (headPos.x == blockPos.x && headPos.y == blockPos.y) {
+                return true;
+            }
+        }
+        return false;
+    }
+    update() {
+        this.collision();
+        this.move();
+    }
     move() {
         const len = this.tails.length;
         if (len >= 2) {
             for (let i = len - 1; i >= 1; i--) {
+                this.tails[i].oldPosition = Object.assign({}, this.tails[i].position);
                 this.tails[i].position.x = this.tails[i - 1].position.x;
                 this.tails[i].position.y = this.tails[i - 1].position.y;
             }
         }
         if (len >= 1) {
+            this.tails[0].oldPosition = Object.assign({}, this.tails[0].position);
             this.tails[0].position.x = this.head.position.x;
             this.tails[0].position.y = this.head.position.y;
         }
+        this.head.oldPosition = Object.assign({}, this.head.position);
         switch (this.dir) {
             case Dir.RIGHT:
-                if (this.head.position.x < this.config.endX) {
-                    this.head.position.x += this.config.cornerSize;
-                }
+                this.head.position.x += this.config.cornerSize;
                 break;
             case Dir.LEFT:
-                if (this.head.position.x > this.config.startX) {
-                    this.head.position.x -= this.config.cornerSize;
-                }
+                this.head.position.x -= this.config.cornerSize;
                 break;
             case Dir.UP:
-                if (this.head.position.y > this.config.startY) {
-                    this.head.position.y -= this.config.cornerSize;
-                }
+                this.head.position.y -= this.config.cornerSize;
                 break;
             case Dir.DOWN:
-                if (this.head.position.y < this.config.endY) {
-                    this.head.position.y += this.config.cornerSize;
-                }
+                this.head.position.y += this.config.cornerSize;
                 break;
         }
     }
     handel() {
+        var isDown = false;
         window.addEventListener("keydown", (e) => {
             e.preventDefault();
-            switch (e.code) {
-                case "ArrowRight":
-                    if (this.dir != Dir.LEFT) {
-                        this.dir = Dir.RIGHT;
-                    }
-                    break;
-                case "ArrowLeft":
-                    if (this.dir != Dir.RIGHT) {
-                        this.dir = Dir.LEFT;
-                    }
-                    break;
-                case "ArrowUp":
-                    if (this.dir != Dir.DOWN) {
-                        this.dir = Dir.UP;
-                    }
-                    break;
-                case "ArrowDown":
-                    if (this.dir != Dir.UP) {
-                        this.dir = Dir.DOWN;
-                    }
-                    break;
+            if (!isDown) {
+                switch (e.code) {
+                    case "ArrowRight":
+                        if (this.dir != Dir.LEFT) {
+                            this.dir = Dir.RIGHT;
+                        }
+                        break;
+                    case "ArrowLeft":
+                        if (this.dir != Dir.RIGHT) {
+                            this.dir = Dir.LEFT;
+                        }
+                        break;
+                    case "ArrowUp":
+                        if (this.dir != Dir.DOWN) {
+                            this.dir = Dir.UP;
+                        }
+                        break;
+                    case "ArrowDown":
+                        if (this.dir != Dir.UP) {
+                            this.dir = Dir.DOWN;
+                        }
+                        break;
+                }
             }
+            isDown = true;
+        });
+        window.addEventListener("keyup", (e) => {
+            isDown = false;
         });
     }
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        class Animi {
+            constructor(fps, callback) {
+                var id = null;
+                var run = true;
+
+
+                function animate() {
+                    function update() {
+                        callback();
+                        setTimeout(() => {
+                            id = requestAnimationFrame(update);
+                            if(!run) {
+                                cancelAnimationFrame(id);
+                            }
+                        }, 1000 / fps);
+                    }
+                    update();
+                }
+                animate();
+
+                this.pause = function() {
+                    run = false;
+                }
+                this.start = function(){
+                    animate();
+                }
+            }
+        }
+        var i = 0;
+        var ani = new Animi(1, () => {
+            console.log(true);
+            i++;
+            if(i == 5) {
+                ani.pause();
+            }
+        });
+
+    </script>
+</body>
+</html>

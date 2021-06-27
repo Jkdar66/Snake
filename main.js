@@ -1,122 +1,61 @@
-import { Grid, Rectangle, Scene, Size, Style, Vector2 } from "./cool.js";
+import { Button, RoundRectangel, Scene, Size, Stage, Vector2 } from "./cool.js";
+import { GameBorder } from "./gameborder.js";
+import { StartScene } from "./gui.js";
 import { Snake } from "./snake.js";
 var config = {
     width: innerWidth,
     height: innerHeight
 };
 const CORNER_SIZE = 30;
-const NUM_ROWS = 20;
-const NUM_COLUMNS = 20;
+const NUM_ROWS = 15;
+const NUM_COLUMNS = 22;
 const START_X = CORNER_SIZE * 2;
 const END_X = CORNER_SIZE * NUM_COLUMNS + START_X - CORNER_SIZE;
 const START_Y = CORNER_SIZE * 3;
 const END_Y = CORNER_SIZE * NUM_ROWS + START_Y - CORNER_SIZE;
+const GAME_CONFIG = {
+    startX: START_X, startY: START_Y,
+    endX: END_X, endY: END_Y,
+    numColumns: NUM_COLUMNS, numRows: NUM_ROWS,
+    cornerSize: CORNER_SIZE
+};
 var canvas;
-var guiScene;
+var startScene;
 var gameScene;
-var bounds;
-var grid;
-var gridBorder;
 var snake;
-var Dir;
-(function (Dir) {
-    Dir[Dir["RIGHT"] = 0] = "RIGHT";
-    Dir[Dir["LEFT"] = 1] = "LEFT";
-    Dir[Dir["UP"] = 2] = "UP";
-    Dir[Dir["DOWN"] = 3] = "DOWN";
-})(Dir || (Dir = {}));
+var gameBorder;
+var btn;
+var rect;
+var stage;
 function init() {
     canvas = document.createElement("canvas");
     canvas.width = config.width;
     canvas.height = config.height;
     document.body.appendChild(canvas);
+    stage = new Stage();
     gameScene = new Scene(canvas);
-    bounds = [];
-    grid = new Grid(new Vector2(START_X, START_Y), new Size(CORNER_SIZE, CORNER_SIZE), NUM_ROWS, NUM_COLUMNS);
-    grid.style.fill = true;
-    grid.style.borderColor = "rgb(100, 100, 100)";
-    grid.style.backgroundColor = "rgb(200, 200, 200)";
-    gridBorder = new Rectangle(new Vector2(START_X - CORNER_SIZE, START_Y - CORNER_SIZE), new Size((NUM_COLUMNS + 2) * CORNER_SIZE, (NUM_ROWS + 2) * CORNER_SIZE));
-    gridBorder.style.fill = false;
-    gridBorder.style.border = true;
-    gridBorder.style.borderColor = "rgb(0, 0, 0)";
-    gridBorder.style.borderWidth = 2;
-    var style = new Style();
-    style.backgroundColor = "rgb(255, 150, 150)";
-    style.border = true;
-    style.borderColor = "rgb(255, 255, 255)";
-    for (let i = 0; i < 2; i++) {
-        var size = new Size(CORNER_SIZE, CORNER_SIZE);
-        for (let j = -1; j <= NUM_COLUMNS; j++) {
-            var x = j * CORNER_SIZE + START_X;
-            var y = START_Y - CORNER_SIZE;
-            if (i == 1) {
-                y = END_Y + CORNER_SIZE;
-            }
-            var rect = new Rectangle(new Vector2(x, y), size);
-            rect.style = style;
-            bounds.push(rect);
-            gameScene.add(rect);
-        }
-        for (let j = 0; j < NUM_ROWS; j++) {
-            var y = j * CORNER_SIZE + START_Y;
-            var x = START_X - CORNER_SIZE;
-            if (i == 1) {
-                x = END_X + CORNER_SIZE;
-            }
-            var rect = new Rectangle(new Vector2(x, y), size);
-            rect.style = style;
-            bounds.push(rect);
-            gameScene.add(rect);
-        }
-    }
-    gameScene.add(grid);
-    gameScene.add(gridBorder);
-    snake = new Snake(gameScene, {
-        startX: START_X, startY: START_Y,
-        endX: END_X, endY: END_Y,
-        numColumns: NUM_COLUMNS, numRows: NUM_ROWS,
-        cornerSize: CORNER_SIZE
+    startScene = new StartScene(canvas, gameScene);
+    startScene.isVisible = true;
+    stage.add(gameScene);
+    stage.add(startScene);
+    gameBorder = new GameBorder(gameScene, GAME_CONFIG);
+    snake = new Snake(gameScene, GAME_CONFIG, gameBorder.wall);
+    btn = new Button(new Vector2(START_X, 700), new Size(200, 80));
+    rect = new RoundRectangel(new Vector2(START_X, 650), new Size(150, 150));
+    rect.style.borderRadius = 5;
+    gameScene.hover(btn, () => {
+        btn.style.backgroundColor = "rgba(200, 200, 200, 0.8)";
     });
+    gameScene.add(btn);
 }
 function update() {
-    gameScene.update(8, () => {
-        gameScene.clear();
-        gameScene.show();
-        snake.collision();
-        snake.move();
+    stage.update(5, () => {
+        stage.show();
     });
-}
-function handel() {
-    window.addEventListener("keydown", (e) => {
-        e.preventDefault();
-        switch (e.code) {
-            case "ArrowRight":
-                if (snake.dir != Dir.LEFT) {
-                    snake.dir = Dir.RIGHT;
-                }
-                break;
-            case "ArrowLeft":
-                if (snake.dir != Dir.RIGHT) {
-                    snake.dir = Dir.LEFT;
-                }
-                break;
-            case "ArrowUp":
-                if (snake.dir != Dir.DOWN) {
-                    snake.dir = Dir.UP;
-                }
-                break;
-            case "ArrowDown":
-                if (snake.dir != Dir.UP) {
-                    snake.dir = Dir.DOWN;
-                }
-                break;
-        }
-    });
+    stage.start();
 }
 function main() {
     init();
-    // handel();
     update();
 }
 main();

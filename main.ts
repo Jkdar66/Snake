@@ -1,5 +1,7 @@
-import { Grid, Rectangle, Scene, Size, Style, Vector2 } from "./cool.js";
-import { Snake } from "./snake.js";
+import { Button, RoundRectangel, Scene, Size, Stage, Text, Vector2 } from "./cool.js";
+import { GameBorder } from "./gameborder.js";
+import { StartScene } from "./gui.js";
+import { GameConfig, Snake } from "./snake.js";
 
 var config = {
     width: innerWidth,
@@ -7,20 +9,28 @@ var config = {
 }
 
 const CORNER_SIZE = 30;
-const NUM_ROWS: number = 20;
-const NUM_COLUMNS: number = 20;
+const NUM_ROWS: number = 15;
+const NUM_COLUMNS: number = 22;
 const START_X = CORNER_SIZE * 2;
 const END_X = CORNER_SIZE * NUM_COLUMNS + START_X - CORNER_SIZE;
 const START_Y = CORNER_SIZE * 3;
 const END_Y = CORNER_SIZE * NUM_ROWS + START_Y - CORNER_SIZE;
 
+const GAME_CONFIG: GameConfig = {
+    startX: START_X, startY: START_Y,
+    endX: END_X, endY: END_Y,
+    numColumns: NUM_COLUMNS, numRows: NUM_ROWS,
+    cornerSize: CORNER_SIZE
+};
+
 var canvas: HTMLCanvasElement;
-var guiScene: Scene;
+var startScene: StartScene;
 var gameScene: Scene;
-var bounds: Rectangle[];
-var grid: Grid;
-var gridBorder: Rectangle;
 var snake: Snake;
+var gameBorder: GameBorder;
+var btn: Button;
+var rect: RoundRectangel;
+var stage: Stage;
 
 function init() {
     canvas = document.createElement("canvas");
@@ -28,75 +38,36 @@ function init() {
     canvas.height = config.height;
     document.body.appendChild(canvas);
 
+    stage = new Stage();
+
     gameScene = new Scene(canvas);
+    startScene = new StartScene(canvas, gameScene);
+    startScene.isVisible = true;
 
-    bounds = [];
+    stage.add(gameScene);
+    stage.add(startScene);
 
-    grid = new Grid(new Vector2(START_X, START_Y), new Size(CORNER_SIZE, CORNER_SIZE), NUM_ROWS, NUM_COLUMNS);
-    grid.style.fill = true;
-    grid.style.borderColor = "rgb(100, 100, 100)";
-    grid.style.backgroundColor = "rgb(200, 200, 200)";
+    gameBorder = new GameBorder(gameScene, GAME_CONFIG);
 
-    gridBorder = new Rectangle(
-        new Vector2(START_X - CORNER_SIZE, START_Y - CORNER_SIZE),
-        new Size((NUM_COLUMNS + 2) * CORNER_SIZE, (NUM_ROWS + 2) * CORNER_SIZE)
-    );
-    gridBorder.style.fill = false;
-    gridBorder.style.border = true;
-    gridBorder.style.borderColor = "rgb(0, 0, 0)";
-    gridBorder.style.borderWidth = 2;
+    snake = new Snake(gameScene, GAME_CONFIG, gameBorder.wall);
 
-    var style = new Style();
-    style.backgroundColor = "rgb(255, 150, 150)";
-    style.border = true;
-    style.borderColor = "rgb(255, 255, 255)";
+    btn = new Button(new Vector2(START_X, 700), new Size(200, 80));
 
-    for (let i = 0; i < 2; i++) {
-        var size = new Size(CORNER_SIZE, CORNER_SIZE);
-        
-        for (let j = -1; j <= NUM_COLUMNS; j++) {
-            var x = j * CORNER_SIZE + START_X;
-            var y = START_Y - CORNER_SIZE;
-            if(i == 1) {
-                y = END_Y + CORNER_SIZE;
-            }
-            var rect = new Rectangle(new Vector2(x, y), size);
-            rect.style = style;
-            bounds.push(rect);
-            gameScene.add(rect);
-        }
-        
-        for (let j = 0; j < NUM_ROWS; j++) {
-            var y = j * CORNER_SIZE + START_Y;
-            var x = START_X - CORNER_SIZE;
-            if(i == 1) {
-                x = END_X + CORNER_SIZE;
-            }
-            var rect = new Rectangle(new Vector2(x, y), size);
-            rect.style = style;
-            bounds.push(rect);
-            gameScene.add(rect);
-        }
-    }
+    rect = new RoundRectangel(
+        new Vector2(START_X, 650), new Size(150, 150));
+    rect.style.borderRadius = 5;
 
-    gameScene.add(grid);
-    gameScene.add(gridBorder);
-
-    snake = new Snake(gameScene, {
-        startX: START_X, startY: START_Y,
-        endX: END_X, endY: END_Y,
-        numColumns: NUM_COLUMNS, numRows: NUM_ROWS,
-        cornerSize: CORNER_SIZE
+    gameScene.hover(btn, () => {
+        btn.style.backgroundColor = "rgba(200, 200, 200, 0.8)";
     });
+    gameScene.add(btn);
 }
 
 function update() {
-    gameScene.update(8, () => {
-        gameScene.clear();
-        gameScene.show();
-        snake.collision();
-        snake.move();
+    stage.update(5, () => {
+        stage.show();
     });
+    stage.start();
 }
 
 function main() {
